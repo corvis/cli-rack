@@ -1,0 +1,11 @@
+{
+    "author": "Dmitry Berezovsky",
+    "back": false,
+    "exclude": "",
+    "include": "*.py",
+    "license": "mit",
+    "program": "CLI Rack",
+    "short": "CLI Rack - Lightweight set of tools for creating pretty-looking CLI applications in Python",
+    "single": true,
+    "year": "2021"
+}
