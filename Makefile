@@ -28,6 +28,7 @@ flake8:
        echo "Runing Flake8 checks..."; \
        flake8 $(SRC_ROOT) --count --statistics; \
        \
+       flake8 $(SRC_ROOT)/../../examples --count --statistics; \
        echo "DONE: Flake8"; \
     )
 
@@ -38,6 +39,7 @@ mypy:
        echo "Runing MyPy checks..."; \
        mypy --show-error-codes $(SRC_ROOT); \
        \
+       mypy --show-error-codes $(SRC_ROOT)/../../examples; \
        echo "DONE: MyPy"; \
     )
 
@@ -46,6 +48,8 @@ format:
        if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
        echo "Runing Black code formater..."; \
        black $(SRC_ROOT); \
+       \
+       black $(SRC_ROOT)/../../examples; \
        echo "DONE: Black"; \
     )
 
