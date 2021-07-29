@@ -1,4 +1,4 @@
-#    CLI Rack - Lightweight set of tools for creating pretty-looking CLI applications in Python
+#    CLI Rack - Lightweight set of tools for building pretty-looking CLI applications in Python
 #    Copyright (C) 2021 Dmitry Berezovsky
 #    The MIT License (MIT)
 #
@@ -38,12 +38,14 @@ class __CLI:
         self.ui_logger = logging.getLogger(self.CLI_LOGGER)
         self.log_formatter: Optional[logging.Formatter] = None
         self.ui_formatter: Optional[logging.Formatter] = None
-        self.support_colors = False
+        self.__support_colors = False
 
     def setup(self, ui_log_level=logging.INFO, log_level=logging.INFO, show_stack_traces=False):
-        self.support_colors = ansi.stream_supports_colors(sys.stderr) or ansi.stream_supports_colors(sys.stdin)
-        self.log_formatter = CommonCliLogFormatter(use_colors=self.support_colors, show_stack_traces=show_stack_traces)
-        self.ui_formatter = UILogFormatter(use_colors=self.support_colors, show_stack_traces=show_stack_traces)
+        self.__support_colors = ansi.stream_supports_colors(sys.stderr) or ansi.stream_supports_colors(sys.stdin)
+        self.log_formatter = CommonCliLogFormatter(
+            use_colors=self.__support_colors, show_stack_traces=show_stack_traces
+        )
+        self.ui_formatter = UILogFormatter(use_colors=self.__support_colors, show_stack_traces=show_stack_traces)
         default_log_handler = logging.StreamHandler(sys.stderr)
         default_log_handler.formatter = self.log_formatter
         logging.basicConfig(level=log_level, handlers=[default_log_handler])
@@ -52,6 +54,25 @@ class __CLI:
         self.ui_logger.level = ui_log_level
         self.ui_logger.handlers = [ui_handler]
         self.ui_logger.propagate = False
+
+    @property
+    def support_colors(self) -> bool:
+        return self.__support_colors
+
+    @property
+    def use_colors(self) -> Optional[bool]:
+        if isinstance(self.log_formatter, CommonCliLogFormatter) and isinstance(
+            self.ui_formatter, CommonCliLogFormatter
+        ):
+            return self.log_formatter.use_colors and self.ui_formatter.use_colors
+        return None
+
+    @use_colors.setter
+    def use_colors(self, val: bool):
+        if isinstance(self.log_formatter, CommonCliLogFormatter) and isinstance(
+            self.ui_formatter, CommonCliLogFormatter
+        ):
+            self.log_formatter.use_colors = self.ui_formatter.use_colors = val
 
     def verbose_mode(self):
         self.set_ui_log_level(logging.DEBUG)
@@ -85,7 +106,7 @@ class __CLI:
         print(msg)
 
     def print_info(self, msg: str, style: Optional[ansi.AnsiCodeType] = None):
-        self.ui_logger.info(ansi.Seq.wrap(style, msg) if self.support_colors else msg)
+        self.ui_logger.info(ansi.Seq.wrap(style, msg) if self.use_colors else msg)
 
     def print_warn(self, msg: str):
         self.ui_logger.warning(msg)

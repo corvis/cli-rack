@@ -1,4 +1,4 @@
-#    CLI Rack - Lightweight set of tools for creating pretty-looking CLI applications in Python
+#    CLI Rack - Lightweight set of tools for building pretty-looking CLI applications in Python
 #    Copyright (C) 2021 Dmitry Berezovsky
 #    The MIT License (MIT)
 #
