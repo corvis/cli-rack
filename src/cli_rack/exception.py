@@ -21,39 +21,25 @@
 #    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 #    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import argparse
-from typing import Sequence, Union, Dict, AbstractSet, TypeVar, Iterable
+from typing import Optional, Any
 
 
-def any_of_keys_exists(keys: Sequence[str], _dict: Union[Dict, Sequence, AbstractSet]) -> bool:
-    for k in keys:
-        if k in _dict:
-            return True
-    return False
+class FixHintMixin:
+    def __init__(self) -> None:
+        self.fix_hint: Optional[str] = None
+
+    @staticmethod
+    def supports_fix_hint(obj: Any) -> bool:
+        if obj is None:
+            return False
+        return hasattr(obj, "fix_hint")
 
 
-def parse_bool_val(v: str) -> bool:
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ("on", "yes", "true", "t", "y", "1"):
-        return True
-    elif v.lower() in ("off", "no", "false", "f", "n", "0"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected.")
-
-
-AnyScalarType = TypeVar("AnyScalarType", str, int, float, dict)
-
-
-def scalar_to_list(obj: Union[Iterable[AnyScalarType], AnyScalarType]) -> Iterable[AnyScalarType]:
-    """
-    Expects either a sequence of objects or just object.
-    In case of scalar value returns this value wrapped into list
-    If iterable is given - just returns it as it is.
-    :param obj:
-    :return:
-    """
-    if isinstance(obj, Iterable) and not isinstance(obj, str):
-        return obj
-    return [obj]  # type: ignore
+class ExtensionUnavailableError(Exception, FixHintMixin):
+    def __init__(
+        self, extension_name: str, reason: Optional[str] = None, hint: Optional[str] = None, *args: object
+    ) -> None:
+        super().__init__(*args)
+        self.extension_name = extension_name
+        self.reason = reason
+        self.fix_hint = hint

@@ -103,12 +103,18 @@ class __CLI:
             setattr(self.log_formatter, _attr_name, value)
 
     def print_data(self, msg: str):
+        if not isinstance(msg, str):
+            msg = str(msg)
         print(msg)
 
     def print_info(self, msg: str, style: Optional[ansi.AnsiCodeType] = None):
+        if not isinstance(msg, str):
+            msg = str(msg)
         self.ui_logger.info(ansi.Seq.wrap(style, msg) if self.use_colors else msg)
 
     def print_warn(self, msg: str):
+        if not isinstance(msg, str):
+            msg = str(msg)
         self.ui_logger.warning(msg)
 
     def print_error(self, exception_or_msg):
@@ -117,8 +123,10 @@ class __CLI:
     def print_fatal(self, exception_or_msg):
         self.ui_logger.critical(exception_or_msg, exc_info=isinstance(exception_or_msg, Exception))
 
-    def print_debug(self, string_to_print: str):
-        self.ui_logger.debug(string_to_print)
+    def print_debug(self, msg: str):
+        if not isinstance(msg, str):
+            msg = str(msg)
+        self.ui_logger.debug(msg)
 
     def clear_screen(self):
         self.ui_logger.info(ansi.Seq.clear_screen())
