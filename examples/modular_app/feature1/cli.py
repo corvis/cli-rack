@@ -21,4 +21,5 @@ class MyFeatureCliExtension2(CliExtension):
         parser.add_argument("--foo", type=str)
 
     def handle(self, args):
+        # 1 / 0
         CLI.print_info("My Another extension works!")

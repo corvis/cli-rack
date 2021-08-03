@@ -34,6 +34,16 @@ class FixHintMixin:
             return False
         return hasattr(obj, "fix_hint")
 
+    def add_hint(self, msg: str):
+        if self.fix_hint is not None:
+            self.fix_hint += "\n" + msg
+        else:
+            self.fix_hint = msg
+
+    def hint_install_python_package(self, *packages: str):
+        self.add_hint('Try to install package with "pip install {}"'.format(" ".join(packages)))
+        return self
+
 
 class ExtensionUnavailableError(Exception, FixHintMixin):
     def __init__(
@@ -43,3 +53,10 @@ class ExtensionUnavailableError(Exception, FixHintMixin):
         self.extension_name = extension_name
         self.reason = reason
         self.fix_hint = hint
+
+    def __str__(self) -> str:
+        return "{}".format(self.reason)
+
+
+class ExecutionManagerError(Exception):
+    pass

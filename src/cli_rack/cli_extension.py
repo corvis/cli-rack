@@ -47,15 +47,17 @@ class VerboseModeCliExtension(GlobalArgsExtension):
             action="store",
             choices=("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"),
             required=False,
-            help="If set more verbose output will used",
-            default=logging.getLevelName(logging.INFO),
+            help="Configure verbosity level for application logger",
+            # default=logging.getLevelName(logging.INFO),
         )
 
     def handle(self, args: argparse.Namespace):
         if args.verbose and args.log_level is None:
-            CLI.set_log_level(logging.getLevelName("INFO"))
+            CLI.set_ui_log_level(logging.getLevelName("DEBUG"))
+            CLI.set_log_level(logging.getLevelName("DEBUG"))
         elif args.log_level is not None:
             CLI.set_log_level(logging.getLevelName(args.log_level))
+            CLI.set_ui_log_level(logging.DEBUG if args.verbose else logging.INFO)
 
 
 class DebugModeCliExtension(GlobalArgsExtension):
@@ -77,3 +79,21 @@ class DebugModeCliExtension(GlobalArgsExtension):
             CLI.set_stack_traces(True)
         else:
             CLI.set_stack_traces(False)
+
+
+class ShowUnavailableModulesCliExtension(GlobalArgsExtension):
+    @classmethod
+    def setup_parser(cls, parser: argparse.ArgumentParser):
+        parser.add_argument(
+            "-z",
+            "--all-modules",
+            dest="show_unavailable_modules",
+            action="store_true",
+            required=False,
+            help="Report information about installed but unavailable modules",
+            default=False,
+        )
+
+    def handle(self, args):
+        if self.app_manager is not None:
+            self.app_manager.show_unavailable_modules = args.show_unavailable_modules

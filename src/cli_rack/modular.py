@@ -30,7 +30,8 @@ from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop
 from typing import Optional, Sequence, List, Union, Iterable, NamedTuple, Type
 
-from cli_rack.exception import ExtensionUnavailableError
+from cli_rack import CLI
+from cli_rack.exception import ExtensionUnavailableError, ExecutionManagerError
 from cli_rack.utils import scalar_to_list
 
 
@@ -42,9 +43,8 @@ class CliExtension(ABC):
     COMMAND_NAME: Optional[str] = None
     COMMAND_DESCRIPTION: Optional[str] = None
 
-    def __init__(self, parser: argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        self.parser = parser
 
     @classmethod
     def setup_parser(cls, parser: argparse.ArgumentParser):
@@ -57,10 +57,13 @@ class CliExtension(ABC):
     def handle(self, args):
         raise NotImplementedError()
 
+    def __repr__(self) -> str:
+        return "<{}>".format(self.__class__.__qualname__)
+
 
 class AsyncCliExtension(CliExtension):
-    def __init__(self, parser: argparse.ArgumentParser, loop: AbstractEventLoop):
-        super().__init__(parser)
+    def __init__(self, loop: AbstractEventLoop, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.__loop = loop
 
     @property
@@ -72,6 +75,10 @@ class AsyncCliExtension(CliExtension):
 
 
 class GlobalArgsExtension(ABC):
+    def __init__(self, app_manager: Optional["CliAppManager"] = None) -> None:
+        super().__init__()
+        self.app_manager: Optional["CliAppManager"] = app_manager
+
     @classmethod
     def setup_parser(cls, parser: argparse.ArgumentParser):
         pass
@@ -104,6 +111,8 @@ class DiscoveredCliExtension(object):
     @property
     def full_name(self) -> Optional[str]:
         if None in (self.module_full_name, self.cli_extension):
+            if self.package_name is not None:
+                return self.package_name
             return None
         return ".".join((self.module_full_name, self.cli_extension.__name__))  # type: ignore
 
@@ -113,6 +122,47 @@ class DiscoveredCliExtension(object):
             self.package_name if module_name is None else module_name,
             self.cli_extension.__name__ if self.cli_extension else "n/a",
         )
+
+
+class BaseExecutionManager(ABC):
+    @classmethod
+    def _instantiate_extension(cls, clazz: Type[CliExtension]) -> CliExtension:
+        return clazz()
+
+    @classmethod
+    def _setup_extension(cls, ext: CliExtension):
+        ext.setup()
+
+
+class ExecutionManager(BaseExecutionManager):
+    def __init__(self) -> None:
+        super().__init__()
+        self.__logger = logging.getLogger("cli.exec-mng")
+
+    def run(self, commands: Sequence[argparse.Namespace]):
+        try:
+            for cmd in commands:
+                self.__logger.debug("Running {}".format(cmd.cmd))
+                try:
+                    ext = self._instantiate_extension(cmd.ext_cls)
+                    self._setup_extension(ext)
+                except Exception as e:
+                    raise ExecutionManagerError(
+                        "Unable to instantiate extension for command {}: {}".format(cmd.cmd, str(e))
+                    ) from e
+                try:
+                    ext.handle(cmd)
+                except Exception as e:
+                    msg = "Error during {} command execution: ".format(cmd.cmd) if len(commands) > 1 else ""
+                    raise ExecutionManagerError(msg + str(e)) from e
+        except ExecutionManagerError as e:
+            CLI.print_error(e)
+
+
+class AsyncExecutionManager(BaseExecutionManager):
+    def __init__(self) -> None:
+        super().__init__()
+        self.__logger = logging.getLogger("cli.async-exec-mng")
 
 
 class CliAppManager:
@@ -126,6 +176,7 @@ class CliAppManager:
         **kwargs,
     ) -> None:
         super().__init__()
+        self.__logger = logging.getLogger("cli.app-mng")
         self.discovery_manager = DiscoveryManager()
         self.available_extensions: List[Type[CliExtension]] = []
         self.global_args_extensions: List[Type[GlobalArgsExtension]] = []
@@ -139,9 +190,12 @@ class CliAppManager:
             **kwargs,
         )
         self.add_commands_parser = True
-        self.allow_multiple_commands = True
+        self.allow_multiple_commands = False
         self.add_verbosity_control = True
         self.add_debug_mode_control = True
+        self.add_discovered_unavailable_report = True
+        self.show_unavailable_modules = False
+        self.global_args: Optional[argparse.Namespace] = None
         self.setup_global()
 
     def register_extension(self, *ext_type: Type[CliExtension]) -> None:
@@ -167,8 +221,7 @@ class CliAppManager:
     @classmethod
     def __configure_subparser_for_cli_extension(cls, ext_cls: Type[CliExtension], parser: argparse.ArgumentParser):
         ext_cls.setup_parser(parser)
-        ext_instance = ext_cls(parser)
-        parser.set_defaults(ext_cls=ext_instance)
+        parser.set_defaults(ext_cls=ext_cls)
 
     def setup_global(self):
         # Configure global parser
@@ -180,15 +233,21 @@ class CliAppManager:
             from .cli_extension import VerboseModeCliExtension
 
             self.register_global_args_extension(VerboseModeCliExtension)
+        if self.add_discovered_unavailable_report:
+            from .cli_extension import ShowUnavailableModulesCliExtension
+
+            self.register_global_args_extension(ShowUnavailableModulesCliExtension)
         self.__setup_parser_for_global_args(self.global_args_parser)
 
     def parse_global(self, args=None) -> argparse.Namespace:
-        return self.__read_global_args(args)
+        res = self.__read_global_args(args)
+        self.global_args = res
+        return res
 
     def parse_and_handle_global(self, args=None):
         parsed = self.parse_global(args)
         for ext in self.global_args_extensions:
-            instance = ext()
+            instance = ext(self)
             instance.handle(parsed)
 
     def setup(self):
@@ -225,26 +284,47 @@ class CliAppManager:
                 else:
                     prev = unknown
                 commands.append(command_args)
-        else:
+        elif len(unknown) > 0:
             self.__report_unrecognized_args(unknown)
         return commands
-        # Sequentially handle commands here
 
+    def discover_and_register_extensions(
+        self,
+        package_to_scan: Union[str, Iterable[str]],
+        scan_module: Union[str, Iterable[str]] = "cli",
+        report_unavailable: Optional[bool] = None,
+    ) -> Sequence[DiscoveredCliExtension]:
+        discovered = self.discovery_manager.discover_cli_extensions(package_to_scan, scan_module, False)
+        show_unavailable = report_unavailable if report_unavailable is not None else self.show_unavailable_modules
+        for x in discovered:
+            if x.is_available:
+                if x.cli_extension is None:
+                    self.__logger.warning(
+                        "Ignored extension {}. It is marked as available but class is not assigned. "
+                        "This might be caused by internal data inconsistency due to some bug.".format(x.full_name)
+                    )
+                    continue
+                self.register_extension(x.cli_extension)
+            elif show_unavailable:
+                self.report_unavailable_extension(x)
+        return discovered
 
-# Now after first parse all chained commands are stored in extra.
-# I reparse it while it is not empty to get all the chained commands and create
-# separate namespaces for them. And i get nicer usage string that argparse generates.
-# This function takes the 'extra' attribute from global namespace and re-parses it to create
-# separate namespaces for all other chained commands.
-# def parse_extra (parser, namespace):
-#   namespaces = []
-#   extra = namespace.extra
-#   while extra:
-#     n = parser.parse_args(extra)
-#     extra = n.extra
-#     namespaces.append(n)
-#
-#   return namespaces
+    @classmethod
+    def report_unavailable_extension(cls, ext: DiscoveredCliExtension):
+        CLI.print_warn("WARNING: Module {} is unavailable".format(ext.full_name))
+        if ext.availability:
+            if ext.availability.unavailable_reason:
+                CLI.print_warn("\t\t Reason: {}".format(ext.availability.unavailable_reason))
+            if ext.availability.recommendation:
+                CLI.print_warn("\t\t Tip: {}".format(ext.availability.recommendation))
+
+    @classmethod
+    def create_execution_manager(cls) -> ExecutionManager:
+        return ExecutionManager()
+
+    @classmethod
+    def create_async_execution_manager(cls) -> AsyncExecutionManager:
+        return AsyncExecutionManager()
 
 
 class DiscoveryManager:
@@ -320,5 +400,7 @@ class DiscoveryManager:
                             pass
             except ImportError:
                 self.__logger.warning("Package {} doesn't exist".format(package_name))
-        self.__logger.debug("Discovered {} extension(-s)".format(len(extensions)))
+        self.__logger.debug(
+            "Discovered {} extension(-s)".format(len(list(filter(lambda x: x.is_available, extensions))))
+        )
         return extensions
