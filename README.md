@@ -1,4 +1,4 @@
-![CLI Rack Cover Picture](https://github.com/corvis/cli-rack/blob/docs/assets/cover-picture.png?raw=true "Prana device picture")
+![CLI Rack Cover Picture](https://raw.githubusercontent.com/corvis/cli-rack/master/docs/assets/cover-picture.png "PrCLI Rack Cover Picturee")
 
 <h2 align="center">CLI Rack</h2>
 
