@@ -44,7 +44,7 @@ jobs:
       id: generate_changelog
       uses: scottbrenner/generate-changelog-action@v1.3.3
       with:
-        allow-unknown: false
+         package-dir: development/package.json
 
     - name: Commit bumped version
       uses: EndBug/add-and-commit@v5
