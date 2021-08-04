@@ -25,7 +25,7 @@ flake8:
 	@( \
        set -e; \
        if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
-       echo "Runing Flake8 checks..."; \
+       echo "Running Flake8 checks..."; \
        flake8 $(SRC_ROOT) --count --statistics; \
        \
        flake8 $(SRC_ROOT)/../../examples --count --statistics; \
@@ -36,7 +36,7 @@ mypy:
 	@( \
        set -e; \
        if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
-       echo "Runing MyPy checks..."; \
+       echo "Running MyPy checks..."; \
        mypy --show-error-codes $(SRC_ROOT); \
        \
        mypy --show-error-codes $(SRC_ROOT)/../../examples; \
@@ -46,14 +46,25 @@ mypy:
 format:
 	@( \
        if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
-       echo "Runing Black code formater..."; \
+       echo "Running Black code formatter..."; \
        black $(SRC_ROOT); \
        \
        black $(SRC_ROOT)/../../examples; \
        echo "DONE: Black"; \
     )
 
-lint: flake8 mypy
+check-format:
+	@( \
+       if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
+       echo "Running Black format check..."; \
+       black --check $(SRC_ROOT); \
+       \
+       black --check $(SRC_ROOT)/../../examples; \
+       echo "DONE: Black format check"; \
+    )
+	
+
+lint: flake8 mypy check-format
 
 build: copyright format lint clean
 	@( \

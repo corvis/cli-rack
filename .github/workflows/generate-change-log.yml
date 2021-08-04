@@ -1,0 +1,26 @@
+name: Generate changelog
+# Use this task to tune changelog generator AND verify changelog before release
+on:
+  push:
+    branches:
+      - alpha
+  workflow_dispatch:
+
+jobs:
+  run:
+    name: Update Unreleased Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Changelog
+        id: generate_changelog
+        uses: scottbrenner/generate-changelog-action@v1.3.3
+        with:
+          allow-unknown: false
+
+      - name: Output
+        run: echo "::group::Changelog"; cat << EOF ${{ steps.generate_changelog.outputs.changelog }} EOF; echo "::endgroup::"
