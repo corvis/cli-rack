@@ -11,7 +11,6 @@ def main(argv):
     app_manager.parse_and_handle_global()
     app_manager.discover_and_register_extensions("modular_app")
     app_manager.setup()
-    # app_manager.args_parser.print_help()
 
     parsed_commands = app_manager.parse(argv)
     for cmd in parsed_commands:
