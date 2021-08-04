@@ -21,7 +21,6 @@ jobs:
         uses: scottbrenner/generate-changelog-action@v1.3.3
         with:
           package-dir: development/package.json
-          allow-unknown: false
 
       - name: Output
         run: echo "::group::Changelog"; cat << EOF ${{ steps.generate_changelog.outputs.changelog }} EOF; echo "::endgroup::"
