@@ -110,7 +110,7 @@ setup(
         'Topic :: Home Automation',
 
         # License (should match "license" above)
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'License :: OSI Approved :: MIT License',
         # Python versions support
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
