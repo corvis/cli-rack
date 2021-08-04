@@ -12,13 +12,74 @@
 Lightweight set of tools for creating pretty-looking CLI applications in Python. This library tends to simplify and
 unify the approach to structuring CLI related code. At the moment it covers:
 
-1. Managing terminal output - verbosity levels, colored output, logger configuration
-2. Parsing arguments
-3. Modular application design - each module could extend argument parser with own command
-4. Modules discovery - scanning packages to find cli extension modules
-5. Module availability support - module might declare a method to verify if environment is suitable (e.g. all
-   dependencies are present). If not, module will be automatically excluded from CLI interface
-6. Sync and Async execution manager
+* Managing terminal output - verbosity levels, colored output, logger configuration
+* Parsing arguments
+* Modular application design - each module could extend argument parser with own command
+* Modules discovery - scanning packages to find cli extension modules
+* Module availability support - module might declare a method to verify if environment is suitable (e.g. all
+  dependencies are present). If not, module will be automatically excluded from CLI interface
+* Sync and Async execution manager
+
+# Features
+
+## CLI output
+
+The module provides built-in methods to output information for the end user. It is configured to pint direct
+informational messages, errors and warnings to the `stderr` and execution result to `stdout`.
+
+The functionality is available via special object called `CLI`. Consider the following example:
+
+```python
+from cli_rack import CLI
+
+CLI.setup()
+
+CLI.print_info("This is just a message to user")
+CLI.print_warn("This is a warning")
+CLI.print_error("This is an error message")
+CLI.print_error(ValueError("This is an exception"))
+CLI.print_data("This text comes to STDOUT, not STDERR")
+```
+
+`CLI.setup()` must be invoked in the very beginning of the program as it determines terminal capabilities and configures
+logger, filters and formatters. It is also possible to configure verbosity level on this stage. See
+Section [Verbosity configuration](#verbosity-configuration) for details.
+
+Methods `CLI.print_*` have very similar interface and are designed for printing information of specific type. It is
+highly important to avoid simple built-in `print` function and use `CLI.print_*` methods instead as it allows to keep
+output clean, consistent and well formatted. Also, verbosity control won't work for any data written directly into
+output stream. It is also possible to override formatting options for individual message see
+Section [Formatting capabilities](#formatting-capabilities) for more details.
+
+#### CLI.print_info(msg: str, style: Optional[ansi.AnsiCodeType] = None)
+
+### Verbosity configuration
+TBD
+
+### Debug mode
+TBD
+
+### Colored output
+TBD
+
+### Formatting capabilities
+TBD
+
+## Logging
+### Preconfigured logger
+TBD
+
+### Streamlined interface for tuning configuration
+TBD
+
+## Modular application architecture
+    TBD
+    * Global options
+    * Commands
+    * Params
+    * Dynamic available commands discovery
+    * Commands availability
+    * Automatic dependencies installation
 
 # Credits
 
