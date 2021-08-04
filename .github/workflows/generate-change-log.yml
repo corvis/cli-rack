@@ -13,12 +13,15 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Changelog
         id: generate_changelog
         uses: scottbrenner/generate-changelog-action@v1.3.3
         with:
           package-dir: development/package.json
+          to-tag: ${{ github.ref }}
 
       - name: Output
         run: echo "::group::Changelog"; cat << EOF ${{ steps.generate_changelog.outputs.changelog }} EOF; echo "::endgroup::"
