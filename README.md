@@ -3,10 +3,14 @@
 <h2 align="center">CLI Rack</h2>
 
 <p align="center">
+<a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/l/cli-rack?style=for-the-badge" title="License: MIT"/></a> 
+<a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/pyversions/cli-rack?style=for-the-badge" title="Python Versions"/></a> 
 <a href="https://github.com/psf/black/"><img src="https://img.shields.io/badge/Code%20Style-black-black?style=for-the-badge" title="Code style: black"/></a> 
+<a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/v/cli-rack?style=for-the-badge" title="PyPy Version"/></a> 
+<a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/dm/cli-rack?style=for-the-badge" title="PyPy Downloads"/></a> 
 <br>
 <a href="https://github.com/corvis/cli-rack/"><img src="https://img.shields.io/github/last-commit/corvis/cli-rack?style=for-the-badge" title="Last Commit"/></a> 
-  <a href="https://github.com/corvis/cli-rack/releases/"><img src="https://img.shields.io/github/release-date/corvis/cli-rack?style=for-the-badge" title="Last Release"/></a> 
+<a href="https://github.com/corvis/cli-rack/releases/"><img src="https://img.shields.io/github/release-date/corvis/cli-rack?style=for-the-badge" title="Last Release"/></a> 
 </p>
 
 Lightweight set of tools for creating pretty-looking CLI applications in Python. This library tends to simplify and
