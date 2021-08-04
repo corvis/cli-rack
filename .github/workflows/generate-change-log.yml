@@ -20,6 +20,7 @@ jobs:
         id: generate_changelog
         uses: scottbrenner/generate-changelog-action@v1.3.3
         with:
+          package-dir: development/package.json
           allow-unknown: false
 
       - name: Output
