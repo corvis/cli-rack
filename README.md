@@ -9,6 +9,7 @@
 <a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/v/cli-rack?style=for-the-badge" title="PyPy Version"/></a> 
 <a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/dm/cli-rack?style=for-the-badge" title="PyPy Downloads"/></a> 
 <br>
+<a href="https://github.com/corvis/cli-rack/actions/workflows/sanity-check.yml"><img src="https://img.shields.io/github/workflow/status/corvis/cli-rack/Sanity%20Check?style=for-the-badge" title="Build Status"/></a> 
 <a href="https://github.com/corvis/cli-rack/"><img src="https://img.shields.io/github/last-commit/corvis/cli-rack?style=for-the-badge" title="Last Commit"/></a> 
 <a href="https://github.com/corvis/cli-rack/releases/"><img src="https://img.shields.io/github/release-date/corvis/cli-rack?style=for-the-badge" title="Last Release"/></a> 
 </p>
@@ -61,9 +62,6 @@ Section [Formatting capabilities](#formatting-capabilities) for more details.
 TBD
 
 ### Debug mode
-TBD
-
-### Colored output
 TBD
 
 ### Formatting capabilities
