@@ -1,4 +1,4 @@
-from cli_rack.exception import ExtensionUnavailableError
+from cli_rack.modular import ExtensionUnavailableError
 
 
 def is_available() -> bool:

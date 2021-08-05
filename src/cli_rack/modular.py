@@ -31,7 +31,7 @@ from asyncio import AbstractEventLoop
 from typing import Optional, Sequence, List, Union, Iterable, NamedTuple, Type
 
 from cli_rack import CLI
-from cli_rack.exception import ExtensionUnavailableError, ExecutionManagerError
+from cli_rack.exception import CLIRackError
 from cli_rack.utils import scalar_to_list
 
 
@@ -122,6 +122,22 @@ class DiscoveredCliExtension(object):
             self.package_name if module_name is None else module_name,
             self.cli_extension.__name__ if self.cli_extension else "n/a",
         )
+
+
+class ExtensionUnavailableError(CLIRackError):
+    def __init__(
+        self, extension_name: str, reason: Optional[str] = None, hint: Optional[str] = None, *args: object
+    ) -> None:
+        super().__init__(*args, fix_hint=hint)
+        self.extension_name = extension_name
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return "{}".format(self.reason)
+
+
+class ExecutionManagerError(CLIRackError):
+    pass
 
 
 class BaseExecutionManager(ABC):

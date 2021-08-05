@@ -35,28 +35,33 @@ from cli_rack.serialize import DateTimeEncoder
 
 
 class LoaderError(CLIRackError):
-
-    def __init__(self, msg, *args, fix_hint: Optional[str] = None, locator: Optional['BaseLocatorDef'] = None,
-                 meta: Optional['LoadedDataMeta'] = None) -> None:
+    def __init__(
+        self,
+        msg,
+        *args,
+        fix_hint: Optional[str] = None,
+        locator: Optional["BaseLocatorDef"] = None,
+        meta: Optional["LoadedDataMeta"] = None,
+    ) -> None:
         super().__init__(msg, *args, fix_hint=fix_hint)
         self.meta = meta
         self.__locator = locator
 
     @property
-    def locator(self) -> Optional['BaseLocatorDef']:
+    def locator(self) -> Optional["BaseLocatorDef"]:
         if self.__locator is not None:
             return self.__locator
-        elif self.meta.locator is not None:
+        elif self.meta is not None:
             return self.meta.locator
         else:
             return None
 
 
 class InvalidPackageStructure(LoaderError):
-
-    def __init__(self, meta: 'LoadedDataMeta', details: Optional[str] = None, hint: Optional[str] = None) -> None:
-        message = 'Package {} has invalid ' \
-                  'structure (directory layout){}'.format(meta.locator, ': ' + details if details is not None else '')
+    def __init__(self, meta: "LoadedDataMeta", details: Optional[str] = None, hint: Optional[str] = None) -> None:
+        message = "Package {} has invalid " "structure (directory layout){}".format(
+            meta.locator, ": " + details if details is not None else ""
+        )
         super().__init__(message, meta=meta, fix_hint=hint)
 
 
@@ -108,8 +113,11 @@ class BaseLoader(object, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def load(self, locator: Union[str, BaseLocatorDef],
-             target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None) -> LoadedDataMeta:
+    def load(
+        self,
+        locator: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+    ) -> LoadedDataMeta:
         raise NotImplementedError
 
     def write_meta(self, meta: LoadedDataMeta):
@@ -118,6 +126,7 @@ class BaseLoader(object, metaclass=ABCMeta):
 
 
 # ================== Local File System Loader =================
+
 
 class LocalLocatorDef(BaseLocatorDef):
     def __init__(self, type: str, path: str) -> None:
@@ -147,8 +156,7 @@ class LocalLoader(BaseLoader):
             return locator_str
         else:
             raise ValueError(
-                "Locator should be either locator string or LocatorDef got {}".format(
-                    locator_str.__class__.__name__)
+                "Locator should be either locator string or LocatorDef got {}".format(locator_str.__class__.__name__)
             )
 
     @classmethod
@@ -157,8 +165,11 @@ class LocalLoader(BaseLoader):
             raise CLIRackError('Invalid locator: path "{}" doesn\'t exist'.format(path))
         return path
 
-    def load(self, locator_: Union[str, BaseLocatorDef],
-             target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None) -> LoadedDataMeta:
+    def load(
+        self,
+        locator_: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+    ) -> LoadedDataMeta:
         locator = self.locator_to_locator_def(locator_)
         fs_target = os.path.join(self.target_dir, locator.name)
         fs_source = self.resolve_path(locator.path)
@@ -173,13 +184,13 @@ class LocalLoader(BaseLoader):
             meta = LoadedDataMeta(locator, fs_target, file_name)
             meta.is_file = True
         elif os.path.isdir(fs_source):
-            shutil.copytree(fs_source, fs_target, dirs_exist_ok=True)
+            shutil.copytree(fs_source, fs_target, dirs_exist_ok=True)  # type: ignore
             meta = LoadedDataMeta(locator, fs_target)
             meta.is_file = False
             if target_path_resolver is not None:
                 meta.target_path = target_path_resolver(meta)
             else:
-                meta.target_path = ''
+                meta.target_path = ""
         else:
             raise CLIRackError(
                 "Locator {} points invalid location. It must be either file or directory".format(locator_)

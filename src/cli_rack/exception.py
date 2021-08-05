@@ -49,19 +49,3 @@ class CLIRackError(Exception, FixHintMixin):
     def __init__(self, msg, *args, fix_hint: Optional[str] = None) -> None:
         super().__init__(msg, *args)
         self.fix_hint = fix_hint
-
-
-class ExtensionUnavailableError(CLIRackError):
-    def __init__(
-        self, extension_name: str, reason: Optional[str] = None, hint: Optional[str] = None, *args: object
-    ) -> None:
-        super().__init__(*args, fix_hint=hint)
-        self.extension_name = extension_name
-        self.reason = reason
-
-    def __str__(self) -> str:
-        return "{}".format(self.reason)
-
-
-class ExecutionManagerError(CLIRackError):
-    pass
