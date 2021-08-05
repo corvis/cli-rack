@@ -11,7 +11,8 @@ def components_dir_resolver(meta: LoadedDataMeta) -> str:
 
 
 def main():
-    CLI.setup(show_stack_traces=True)
+    CLI.setup()
+    CLI.verbose_mode()
     CLI.print_info("Loading module from some local folder\n", ansi.Mod.BOLD)
 
     base_dir = os.path.dirname(__file__)

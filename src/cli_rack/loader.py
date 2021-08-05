@@ -24,6 +24,7 @@
 import datetime
 import hashlib
 import json
+import logging
 import os
 import shutil
 from abc import abstractmethod, ABCMeta
@@ -68,10 +69,10 @@ class InvalidPackageStructure(LoaderError):
 class BaseLocatorDef(metaclass=ABCMeta):
     PATH_SEPARATOR = "/"
 
-    def __init__(self, type: str, name: str) -> None:
+    def __init__(self, type: str, name: str, original_locator: Optional[str] = None) -> None:
         self.type = type
         self.name = name
-        self.original_locator: Optional[str] = None
+        self.original_locator = original_locator
 
     @classmethod
     def generate_hash_suffix(cls, suffix: str) -> str:
@@ -79,6 +80,13 @@ class BaseLocatorDef(metaclass=ABCMeta):
 
     def to_dict(self) -> dict:
         return dict(type=self.type)
+
+    def __str__(self) -> str:
+        return (
+            self.original_locator
+            if self.original_locator is not None
+            else "Locator<{}> -> {}".format(self.type, self.name)
+        )
 
 
 class LoadedDataMeta(object):
@@ -129,8 +137,8 @@ class BaseLoader(object, metaclass=ABCMeta):
 
 
 class LocalLocatorDef(BaseLocatorDef):
-    def __init__(self, type: str, path: str) -> None:
-        super().__init__(type, self.path_to_name(path))
+    def __init__(self, type: str, path: str, original_locator: Optional[str] = None) -> None:
+        super().__init__(type, self.path_to_name(path), original_locator)
         self.path = path
 
     @classmethod
@@ -138,19 +146,22 @@ class LocalLocatorDef(BaseLocatorDef):
         return os.path.basename(path) + "-" + cls.generate_hash_suffix(path)
 
     def to_dict(self) -> dict:
-        return dict(type=self.type, path=self.path)
-
-    def __str__(self) -> str:
-        return "".join((self.type, BaseLoader.LOCATOR_PREFIX_DELIMITER, self.path))
+        return dict(type=self.type, path=self.path, original_locator=self.original_locator)
 
 
 class LocalLoader(BaseLoader):
     LOCATOR_PREFIX = "local"
 
+    def __init__(self, target_dir="tmp/external") -> None:
+        super().__init__(target_dir)
+        self.__logger = logging.getLogger("loader.local")
+
     def locator_to_locator_def(self, locator_str: Union[str, BaseLocatorDef]) -> LocalLocatorDef:
         if isinstance(locator_str, str):
             return LocalLocatorDef(
-                type="local", path=locator_str.replace(self.LOCATOR_PREFIX + self.LOCATOR_PREFIX_DELIMITER, "", 1)
+                type="local",
+                path=locator_str.replace(self.LOCATOR_PREFIX + self.LOCATOR_PREFIX_DELIMITER, "", 1),
+                original_locator=locator_str,
             )
         elif isinstance(locator_str, LocalLocatorDef):
             return locator_str
@@ -170,11 +181,15 @@ class LocalLoader(BaseLoader):
         locator_: Union[str, BaseLocatorDef],
         target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
     ) -> LoadedDataMeta:
+        self.__logger.info("Loading " + str(locator_))
         locator = self.locator_to_locator_def(locator_)
         fs_target = os.path.join(self.target_dir, locator.name)
         fs_source = self.resolve_path(locator.path)
+        self.__logger.debug("\tTarget path: " + fs_target)
+        self.__logger.debug("\tSource path: " + fs_source)
         # if target dir already exists - remove it
         if os.path.isdir(fs_target):
+            self.__logger.debug("Target dir already exists. Removing.")
             shutil.rmtree(fs_target)
         # create empty target dir
         utils.ensure_dir(fs_target)
@@ -195,5 +210,7 @@ class LocalLoader(BaseLoader):
             raise CLIRackError(
                 "Locator {} points invalid location. It must be either file or directory".format(locator_)
             )
+        self.__logger.debug("Writing meta data for " + str(locator_))
         self.write_meta(meta)
+        self.__logger.info("Loaded " + str(locator_))
         return meta
