@@ -21,31 +21,32 @@
 #    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 #    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import Optional, Any
+import datetime
+import json
 
 
-class FixHintMixin:
-    def __init__(self) -> None:
-        self.fix_hint: Optional[str] = None
+class DateTimeEncoder(json.JSONEncoder):
+    """
+    IMPORTANT: This implementation replaces timezone with UTC
+    """
+
+    # Override the default method
+    def default(self, obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return {"__t__": "datetime", "tuple": obj.utctimetuple()}
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+
+class DateTimeDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kargs):
+        super().__init__(object_hook=self.dict_to_object, *args, **kargs)
 
     @staticmethod
-    def supports_fix_hint(obj: Any) -> bool:
-        if obj is None:
-            return False
-        return hasattr(obj, "fix_hint")
-
-    def add_hint(self, msg: str):
-        if self.fix_hint is not None:
-            self.fix_hint += "\n" + msg
-        else:
-            self.fix_hint = msg
-
-    def hint_install_python_package(self, *packages: str):
-        self.add_hint('Try to install package with "pip install {}"'.format(" ".join(packages)))
-        return self
-
-
-class CLIRackError(Exception, FixHintMixin):
-    def __init__(self, msg, *args, fix_hint: Optional[str] = None) -> None:
-        super().__init__(msg, *args)
-        self.fix_hint = fix_hint
+    def dict_to_object(d):
+        if "__t__" not in d:
+            return d
+        type = d.pop("__t__")
+        if type == "datetime":
+            datetime_tuple = d.pop("tuple")
+            return datetime.datetime(*datetime_tuple[:6])

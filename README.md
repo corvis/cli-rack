@@ -9,6 +9,7 @@
 <a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/v/cli-rack?style=for-the-badge" title="PyPy Version"/></a> 
 <a href="https://pypi.org/project/cli-rack/"><img src="https://img.shields.io/pypi/dm/cli-rack?style=for-the-badge" title="PyPy Downloads"/></a> 
 <br>
+<a href="https://github.com/corvis/cli-rack/actions/workflows/sanity-check.yml"><img src="https://img.shields.io/github/workflow/status/corvis/cli-rack/Sanity%20Check?style=for-the-badge" title="Build Status"/></a> 
 <a href="https://github.com/corvis/cli-rack/"><img src="https://img.shields.io/github/last-commit/corvis/cli-rack?style=for-the-badge" title="Last Commit"/></a> 
 <a href="https://github.com/corvis/cli-rack/releases/"><img src="https://img.shields.io/github/release-date/corvis/cli-rack?style=for-the-badge" title="Last Release"/></a> 
 </p>
@@ -23,6 +24,8 @@ unify the approach to structuring CLI related code. At the moment it covers:
 * Module availability support - module might declare a method to verify if environment is suitable (e.g. all
   dependencies are present). If not, module will be automatically excluded from CLI interface
 * Sync and Async execution manager
+* Loading external components
+* Installing optional dependencies
 
 # Features
 
@@ -58,25 +61,98 @@ Section [Formatting capabilities](#formatting-capabilities) for more details.
 #### CLI.print_info(msg: str, style: Optional[ansi.AnsiCodeType] = None)
 
 ### Verbosity configuration
+
 TBD
 
 ### Debug mode
-TBD
 
-### Colored output
 TBD
 
 ### Formatting capabilities
+
 TBD
 
 ## Logging
+
 ### Preconfigured logger
+
 TBD
 
 ### Streamlined interface for tuning configuration
+
 TBD
 
+## Loading external libraries
+
+If you are building modular application you might want to allow your app with external components loaded from remote
+repository/server/registry. `cli_rack.loader` package streamlines development of this feature.
+
+The example below illustrates the main idea:
+
+```python
+
+from cli_rack import CLI, ansi
+from cli_rack.loader import LoaderRegistry
+
+CLI.setup()
+CLI.verbose_mode()
+CLI.print_info("Loading module using loader registry\n", ansi.Mod.BOLD)
+
+LoaderRegistry.target_dir = "generated"
+
+resource_meta = LoaderRegistry.load("github://logicify/healthcheckbot")
+CLI.print_info(resource_meta.to_dict())
+```
+
+Here we configure loader to put downloaded modules into `generated` folder. Then ask to download module using the
+following resource locator `github://logicify/healthcheckbot`. `LoaderRegistry` tries to find loader capable to handle
+this type of locator (built-in `GithubLoader` in this case) and passes control to particular loader.
+
+Loader will check if the local copy of the package is already present and it is up to date. If this is the case nothing
+will be downloaded. Otherwise, it will download data and put it under `target_dir`.
+
+The data in the remote location might have different directory layout and it is highly likely you don't need file from
+the root, but rather interested in some subdirectory. For this purpose you could create a `path_resolver` function like
+this:
+
+```python
+import os
+from cli_rack.loader import LoadedDataMeta, InvalidPackageStructure, LoaderRegistry
+
+
+def packages_dir_resolver(meta: LoadedDataMeta) -> str:
+    if os.path.isdir(os.path.join(meta.path, "packages")):
+        return "packages"
+    raise InvalidPackageStructure(meta, "Folder \"packages\" must be present in directory root")
+
+
+LoaderRegistry.target_dir = "generated"
+resource_meta = LoaderRegistry.load("github://corvis/esphome-packages", packages_dir_resolver)
+```
+
+### cli_rack.loader.LocalLoader
+
+TBD
+
+### cli_rack.loader.GithubLoader
+
+TBD
+
+### Extending cli_rack.loader with custom loader
+
+It is pretty trivial to implement custom loader to fetch data from other sources (e.g. your proprietary company NAS):
+
+1. Implement `cli_rack.loader.BaseLocatorDef` and `cli_rack.loader.BaseLoader` (you might want to
+   use [GithubLoader](https://github.com/corvis/cli-rack/blob/development/src/cli_rack/loader.py) as an example).
+2. Register it in `LoaderRegistry`:
+
+```python
+from cli_rack.loader import LoaderRegistry
+LoaderRegistry.register(MyLoader)
+```
+
 ## Modular application architecture
+
     TBD
     * Global options
     * Commands

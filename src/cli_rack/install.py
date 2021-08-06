@@ -21,31 +21,45 @@
 #    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 #    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import Optional, Any
+import subprocess
+import sys
+
+try:
+    import pip  # noqa: F401
+
+    pip_available = True
+except ImportError:
+    pip_available = False
 
 
-class FixHintMixin:
-    def __init__(self) -> None:
-        self.fix_hint: Optional[str] = None
-
-    @staticmethod
-    def supports_fix_hint(obj: Any) -> bool:
-        if obj is None:
-            return False
-        return hasattr(obj, "fix_hint")
-
-    def add_hint(self, msg: str):
-        if self.fix_hint is not None:
-            self.fix_hint += "\n" + msg
-        else:
-            self.fix_hint = msg
-
-    def hint_install_python_package(self, *packages: str):
-        self.add_hint('Try to install package with "pip install {}"'.format(" ".join(packages)))
-        return self
+def verify_pip():
+    if not pip_available:
+        raise ValueError(
+            "PIP is not available so automatic installation is not supported. "
+            "In order to fix this either install PIP or avoid automatic dependencies installation"
+        )
 
 
-class CLIRackError(Exception, FixHintMixin):
-    def __init__(self, msg, *args, fix_hint: Optional[str] = None) -> None:
-        super().__init__(msg, *args)
-        self.fix_hint = fix_hint
+def _run_pip(*args, hide_output=True):
+    stdout = sys.stdout
+    stderr = sys.stderr
+    if hide_output:
+        stdout = stderr = subprocess.PIPE
+    return subprocess.run(
+        ["pip"] + args, bufsize=1024, universal_newlines=True, stdout=stdout, stderr=stderr, shell=False
+    )
+
+
+def is_package_installed(package_name: str):
+    verify_pip()
+    result = _run_pip("show", package_name)
+    if result.returncode != 0:
+        return False
+    else:
+        return True  # TODO: Verify version vere?
+
+
+def install_package(package_name: str):
+    verify_pip()
+    result = _run_pip("install", package_name, hide_output=False)
+    return result.returncode != 0

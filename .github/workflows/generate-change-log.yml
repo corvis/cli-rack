@@ -24,4 +24,4 @@ jobs:
           to-tag: ${{ github.ref }}
 
       - name: Output
-        run: echo "::group::Changelog"; cat << EOF ${{ steps.generate_changelog.outputs.changelog }} EOF; echo "::endgroup::"
+        run: echo "::group::Changelog"; cat << EOF\n ${{ steps.generate_changelog.outputs.changelog }} \nEOF; echo "::endgroup::"
