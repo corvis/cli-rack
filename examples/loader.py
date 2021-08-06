@@ -30,6 +30,11 @@ def main():
     except LoaderError as e:
         CLI.print_error(e)
 
+    try:
+        resource_meta = LoaderRegistry.load("github://test/testrepo@1.1")
+    except LoaderError as e:
+        CLI.print_error(e)
+
 
 if __name__ == "__main__":
     main()

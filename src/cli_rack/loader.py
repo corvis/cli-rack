@@ -155,7 +155,7 @@ class BaseLoader(object, metaclass=ABCMeta):
             )
 
     @classmethod
-    def locator_to_locator_def(cls, locator_str: str) -> BaseLocatorDef:
+    def locator_to_locator_def(cls, locator_str: Union[str, BaseLocatorDef]) -> BaseLocatorDef:
         pass
 
     @abstractmethod
@@ -245,6 +245,25 @@ class _LoaderRegistry(object):
             return loader
         else:
             raise ValueError("LoadRegistry expects subclass of BaseLoader but {} was given".format(loader.__name__))
+
+    def parse_locator(self, locator: Union[str, dict, BaseLocatorDef]) -> Optional[BaseLocatorDef]:
+        if locator is None:
+            return None
+        if isinstance(locator, str) or isinstance(locator, BaseLocatorDef):
+            loader_cls = self.get_for_locator(locator)
+        elif isinstance(locator, dict):
+            loader_cls = self.get_for_locator_dict(locator)
+        else:
+            raise LoaderError(
+                "Locator must be any of str, dict or subclass of BaseLocatorDef but {} given".format(
+                    locator.__class__.__name__
+                )
+            )
+        if loader_cls is None:
+            raise LoaderError("Locator {} is not supported".format(str(locator)))
+        if isinstance(locator, dict):
+            return loader_cls.LOCATOR_CLS.from_dict(locator)
+        return loader_cls.locator_to_locator_def(locator)
 
     def get_for_locator(self, locator: Union[str, BaseLocatorDef]) -> Optional[Type[BaseLoader]]:
         for x in self.__registry:
