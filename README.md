@@ -1,4 +1,4 @@
-![CLI Rack Cover Picture](https://raw.githubusercontent.com/corvis/cli-rack/master/docs/assets/cover-picture.png "PrCLI Rack Cover Picturee")
+![CLI Rack Cover Picture](https://raw.githubusercontent.com/corvis/cli-rack/master/docs/assets/cover-picture.png "CLI Rack Cover Picture")
 
 <h2 align="center">CLI Rack</h2>
 
@@ -23,7 +23,7 @@ unify the approach to structuring CLI related code. At the moment it covers:
 * Modules discovery - scanning packages to find cli extension modules
 * Module availability support - module might declare a method to verify if environment is suitable (e.g. all
   dependencies are present). If not, module will be automatically excluded from CLI interface
-* Sync and Async execution manager
+* Sync and Async execution managers
 * Loading external components
 * Installing optional dependencies
 
