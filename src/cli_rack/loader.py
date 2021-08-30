@@ -199,7 +199,7 @@ class BaseLoader(object, metaclass=ABCMeta):
     def is_reload_required(self, meta: Optional[LoadedDataMeta]) -> bool:
         if meta is None or meta.timestamp is None:
             return True
-        if self.reload_interval:
+        if self.reload_interval is not None:
             return datetime.datetime.now() - meta.timestamp > self.reload_interval
         return False
 
@@ -497,7 +497,7 @@ class GithubLoader(BaseLoader):
     LOCATOR_RE = re.compile(
         LOCATOR_CLS.PREFIX
         + BaseLoader.LOCATOR_PREFIX_DELIMITER
-        + r"//([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-\._]+)(?:@([a-zA-Z0-9\-_.\./]+))?"
+        + r"([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-\._]+)(?:@([a-zA-Z0-9\-_.\./]+))?"
     )
     GITHUB_ZIP_URL = "https://api.github.com/repos/{user}/{repo}/zipball/{ref}"
     LOCAL_ZIPBALL_NAME = "zipball.zip"
