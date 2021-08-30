@@ -23,6 +23,7 @@
 
 import datetime
 import hashlib
+import inspect
 import json
 import logging
 import os
@@ -30,7 +31,7 @@ import re
 import shutil
 import urllib.request
 from abc import abstractmethod, ABCMeta
-from typing import Optional, Union, Callable, List, Type, Tuple
+from typing import Optional, Union, Callable, List, Type, Tuple, Sequence
 from zipfile import ZipFile
 
 from cli_rack import utils
@@ -40,12 +41,12 @@ from cli_rack.serialize import DateTimeEncoder, DateTimeDecoder
 
 class LoaderError(CLIRackError):
     def __init__(
-            self,
-            msg,
-            *args,
-            fix_hint: Optional[str] = None,
-            locator: Optional["BaseLocatorDef"] = None,
-            meta: Optional["LoadedDataMeta"] = None,
+        self,
+        msg,
+        *args,
+        fix_hint: Optional[str] = None,
+        locator: Optional["BaseLocatorDef"] = None,
+        meta: Optional["LoadedDataMeta"] = None,
     ) -> None:
         super().__init__(msg, *args, fix_hint=fix_hint)
         self.meta = meta
@@ -118,7 +119,7 @@ class LoadedDataMeta(object):
         )
 
     @classmethod
-    def from_dict(cls, meta_dict: dict, path: str, registry: Optional['LoaderRegistry'] = None):
+    def from_dict(cls, meta_dict: dict, path: str, registry: Optional["LoaderRegistry"] = None):
         locator_dict = utils.safe_cast(dict, meta_dict.get("locator"))
         if registry is None:
             registry = DefaultLoaderRegistry
@@ -165,10 +166,10 @@ class BaseLoader(object, metaclass=ABCMeta):
 
     @abstractmethod
     def load(
-            self,
-            locator: Union[str, BaseLocatorDef],
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
-            force_reload=False,
+        self,
+        locator: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+        force_reload=False,
     ) -> LoadedDataMeta:
         raise NotImplementedError
 
@@ -203,10 +204,10 @@ class BaseLoader(object, metaclass=ABCMeta):
         return False
 
     def _prepare_meta(
-            self,
-            locator: BaseLocatorDef,
-            path: str,
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+        self,
+        locator: BaseLocatorDef,
+        path: str,
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
     ):
         meta = LoadedDataMeta(locator, path)
         if target_path_resolver is not None:
@@ -256,7 +257,7 @@ class LoaderRegistry(object):
 
     def __instantinate_loader(self, loader_cls: Type[BaseLoader]) -> BaseLoader:
         try:
-            return loader_cls(target_dir=self.target_dir)
+            return loader_cls(target_dir=self.target_dir)  # type: ignore
         except Exception as e:
             raise LoaderError(
                 "Unable to instantiate {}. "
@@ -264,16 +265,18 @@ class LoaderRegistry(object):
                 "kwargs: target_dir".format(loader_cls.__name__)
             ) from e
 
-    def register(self, loader: Union[Type[BaseLoader], BaseLoader]) -> Type[BaseLoader]:
-        if isinstance(loader, Type) and issubclass(loader, BaseLoader):
-            self.__registry.append(self.__instantinate_loader(loader))
-            return loader
+    def register(self, loader: Union[Type[BaseLoader], BaseLoader]) -> BaseLoader:
+        if inspect.isclass(loader) and issubclass(loader, BaseLoader):  # type: ignore
+            instance = self.__instantinate_loader(loader)  # type: ignore
+            self.__registry.append(instance)
+            return instance
         elif isinstance(loader, BaseLoader):
             self.__registry.append(loader)
+            return loader
         else:
             raise ValueError("LoadRegistry expects subclass of BaseLoader but {} was given".format(loader.__name__))
 
-    def register_all(self, loaders: List[Union[Type[BaseLoader], BaseLoader]]):
+    def register_all(self, loaders: Sequence[Union[Type[BaseLoader], BaseLoader]]):
         for x in loaders:
             self.register(x)
 
@@ -312,17 +315,17 @@ class LoaderRegistry(object):
         return None
 
     def load(
-            self,
-            locator: Union[str, BaseLocatorDef],
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
-            force_reload=False,
+        self,
+        locator: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+        force_reload=False,
     ) -> LoadedDataMeta:
         loader = self.get_for_locator(locator)
         if loader is None:
             raise LoaderError("Locator {} is not supported".format(str(locator)))
         return loader.load(locator, target_path_resolver=target_path_resolver, force_reload=force_reload)
 
-    def clone(self) -> 'LoaderRegistry':
+    def clone(self) -> "LoaderRegistry":
         res = LoaderRegistry()
         res.register_all(self.__registry)
         res.target_dir = self.__target_dir
@@ -387,10 +390,10 @@ class LocalLoader(BaseLoader):
         return path
 
     def load(
-            self,
-            locator_: Union[str, BaseLocatorDef],
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
-            force_reload=False,
+        self,
+        locator_: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+        force_reload=False,
     ) -> LoadedDataMeta:
         self._logger.info("Loading " + str(locator_))
         locator = self.locator_to_locator_def(locator_)
@@ -435,8 +438,7 @@ class GitLocatorDef(BaseLocatorDef):
     PREFIX = "git"
 
     def __init__(
-            self, url: str, ref: Optional[str] = None, name: Optional[str] = None,
-            original_locator: Optional[str] = None
+        self, url: str, ref: Optional[str] = None, name: Optional[str] = None, original_locator: Optional[str] = None
     ) -> None:
         self.url = url
         self.ref = ref
@@ -461,7 +463,7 @@ class GithubLocatorDef(GitLocatorDef):
     TYPE = "github"
 
     def __init__(
-            self, user_name: str, repo_name: str, ref: Optional[str] = None, original_locator: Optional[str] = None
+        self, user_name: str, repo_name: str, ref: Optional[str] = None, original_locator: Optional[str] = None
     ) -> None:
         url = "https://github.com/{}/{}.git".format(user_name, repo_name)
         self.user_name = user_name
@@ -532,10 +534,10 @@ class GithubLoader(BaseLoader):
             )
 
     def load(
-            self,
-            locator_: Union[str, BaseLocatorDef],
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
-            force_reload=False,
+        self,
+        locator_: Union[str, BaseLocatorDef],
+        target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None,
+        force_reload=False,
     ) -> LoadedDataMeta:
         self._logger.info("Loading " + str(locator_))
         locator = self.locator_to_locator_def(locator_)
@@ -571,8 +573,7 @@ class GithubLoader(BaseLoader):
         return self._write_meta(meta)
 
     def _prepare_meta(
-            self, locator: BaseLocatorDef, path: str,
-            target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None
+        self, locator: BaseLocatorDef, path: str, target_path_resolver: Optional[Callable[[LoadedDataMeta], str]] = None
     ) -> LoadedDataMeta:
         meta = super()._prepare_meta(locator, path, target_path_resolver)
         meta.is_file = False
