@@ -252,5 +252,5 @@ class ValidationResult:
     @property
     def errors(self) -> List[Invalid]:
         if self.has_errors:
-            return self.error.errors
+            return self.error.errors    # type: ignore
         return []

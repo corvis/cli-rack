@@ -21,6 +21,8 @@
 #    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 #    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from typing import Dict, Tuple, Type
+
 _TYPE_OVERLOADS = {
     int: type("EInt", (int,), dict()),
     float: type("EFloat", (float,), dict()),
@@ -30,7 +32,7 @@ _TYPE_OVERLOADS = {
 }
 
 # cache created classes here
-_CLASS_LOOKUP = {}
+_CLASS_LOOKUP: Dict[Tuple[Type, Type], Type] = {}
 
 
 def add_class_to_obj(value, cls):
