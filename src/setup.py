@@ -121,14 +121,16 @@ setup(
     python_requires='>3.6',
 
     # Structure
-    packages=find_packages(include=['cli_rack', 'cli_rack.*']),
+    packages=find_packages(include=['cli_rack', 'cli_rack.*', 'cli_rack_validation', 'cli_rack_validation']),
     # py_modules=["app", 'cli', 'daemonize'],
 
     install_requires=requirements,
 
     # Extra dependencies might be installed with:
     # pip install -e .[dev,test]
-    extras_require={},
+    extras_require={
+        'validation': ['voluptuous==0.12.1']
+    },
 
     package_data={
         # 'examples': [path.join(root_dir, 'examples')],
