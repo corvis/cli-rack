@@ -497,7 +497,7 @@ class GithubLoader(BaseLoader):
     LOCATOR_RE = re.compile(
         LOCATOR_CLS.PREFIX
         + BaseLoader.LOCATOR_PREFIX_DELIMITER
-        + r"([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-\._]+)(?:@([a-zA-Z0-9\-_.\./]+))?"
+        + r"//?([a-zA-Z0-9\-]+)/([a-zA-Z0-9\-\._]+)(?:@([a-zA-Z0-9\-_.\./]+))?"
     )
     GITHUB_ZIP_URL = "https://api.github.com/repos/{user}/{repo}/zipball/{ref}"
     LOCAL_ZIPBALL_NAME = "zipball.zip"
