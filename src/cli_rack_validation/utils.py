@@ -27,7 +27,7 @@ _TYPE_OVERLOADS = {
     int: type("EInt", (int,), dict()),
     float: type("EFloat", (float,), dict()),
     str: type("EStr", (str,), dict()),
-    dict: type("EDict", (str,), dict()),
+    dict: type("EDict", (dict,), dict()),
     list: type("EList", (list,), dict()),
 }
 

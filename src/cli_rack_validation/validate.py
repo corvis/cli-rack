@@ -23,16 +23,18 @@
 
 import copy
 import logging
+import os
 import re
 import uuid as uuid_
+from collections import UserString
 from contextlib import contextmanager
 from datetime import datetime
 
 import voluptuous as vol
 
-from .const import CONST_HOUR, CONST_MINUTE, CONST_SECOND
+from .const import CONST_HOUR, CONST_MINUTE, CONST_SECOND, CONST_NAME, CONST_EMAIL
 from .domain import HexInt, TimePeriod, TimePeriodMilliseconds, TimePeriodMicroseconds, TimePeriodSeconds, \
-    TimePeriodMinutes, EnumValue, ValidationResult
+    TimePeriodMinutes, EnumValue, ValidationResult, IPAddress
 from .utils import add_class_to_obj, list_starts_with
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,6 +64,11 @@ Required = vol.Required
 RequiredFieldInvalid = vol.RequiredFieldInvalid
 
 
+class SensitiveStr(UserString):
+    def __str__(self) -> str:
+        return "**************"
+
+
 def alphanumeric(value):
     if value is None:
         raise Invalid("string value is None")
@@ -70,8 +77,10 @@ def alphanumeric(value):
         raise Invalid(f"{value} is not alphanumeric")
     return value
 
+
 def anything(value):
     return value
+
 
 def string(value):
     """Validate that a configuration value is a string. If not, automatically converts to a string.
@@ -102,6 +111,11 @@ def string_strict(value):
     )
 
 
+def sensitive_string(value):
+    value = string(value)
+    return SensitiveStr(value)
+
+
 def boolean(value):
     """Validate the given config option to be a boolean.
     This option allows a bunch of different ways of expressing boolean values:
@@ -114,14 +128,81 @@ def boolean(value):
         return value
     if isinstance(value, str):
         value = value.lower()
-        if value in ("true", "yes", "on", "enable"):
+        if value in ("true", "yes", "on", "enable", "1"):
             return True
-        if value in ("false", "no", "off", "disable"):
+        if value in ("false", "no", "off", "disable", "0"):
             return False
+    if isinstance(value, int):
+        if value == 0:
+            return False
+        if value == 1:
+            return True
     raise Invalid(
         "Expected boolean value, but cannot convert {} to a boolean. "
         "Please use 'true' or 'false'".format(value)
     )
+
+
+def boolean_strict(value):
+    if isinstance(value, bool):
+        return value
+    raise Invalid("Expected boolean value. Got {}.".format(value))
+
+
+def email_strict(value):
+    value = string_strict(value)
+    from email.utils import parseaddr
+    name, email = parseaddr(value)
+    if len(name.strip()) > 0 or len(email.strip()) == 0:
+        raise Invalid("Invalid email {}.".format(value))
+    return email
+
+
+def email_dict(value):
+    err = Invalid("Expected dict containing name and email keys")
+    if not isinstance(value, dict):
+        raise err
+    validate_dict = Schema({Optional(CONST_NAME): str, CONST_EMAIL: email_strict})
+    try:
+        return validate_dict(value)
+    except Invalid:
+        raise err
+
+
+def ensure_email_dict(value):
+    if isinstance(value, str):
+        from email.utils import parseaddr
+        name, email = parseaddr(value)
+        return email_dict({CONST_NAME: name, CONST_EMAIL: email})
+    else:
+        return email_dict(value)
+
+
+def domain(value):
+    value = string(value)
+    if re.match(vol.DOMAIN_REGEX, value) is not None:
+        return value
+    try:
+        return str(ipv4(value))
+    except Invalid as err:
+        raise Invalid(f"Invalid domain: {value}") from err
+
+
+def ipv4(value):
+    if isinstance(value, list):
+        parts = value
+    elif isinstance(value, str):
+        parts = value.split(".")
+    elif isinstance(value, IPAddress):
+        return value
+    else:
+        raise Invalid("IPv4 address must consist of either string or " "integer list")
+    if len(parts) != 4:
+        raise Invalid("IPv4 address must consist of four point-separated " "integers")
+    parts_ = list(map(int, parts))
+    if not all(0 <= x < 256 for x in parts_):
+        raise Invalid("IPv4 address parts must be in range from 0 to 255")
+    return IPAddress(*parts_)
 
 
 def ensure_list(*validators):
@@ -141,6 +222,14 @@ def ensure_list(*validators):
         return list_schema(value)
 
     return validator
+
+
+def list_schema(*validators):
+    return Schema([All(*validators)])
+
+
+def dict_schema(dict_params: dict):
+    return Schema(dict_params)
 
 
 def hex_int(value):
@@ -172,6 +261,9 @@ def int_(value):
     except ValueError:
         # pylint: disable=raise-missing-from
         raise Invalid(f"Expected integer, but cannot parse {value} as an integer")
+
+
+integer = int_
 
 
 def int_range(min=None, max=None, min_included=True, max_included=True):
@@ -466,7 +558,7 @@ METRIC_SUFFIXES = {
 }
 
 
-def float_with_unit(quantity, regex_suffix, optional_unit=False):
+def float_with_unit(quantity, regex_suffix, optional_unit=False, no_conversion=False):
     pattern = re.compile(
         r"^([-+]?[0-9]*\.?[0-9]*)\s*(\w*?)" + regex_suffix + r"$", re.UNICODE
     )
@@ -477,7 +569,8 @@ def float_with_unit(quantity, regex_suffix, optional_unit=False):
                 return float_(value)
             except Invalid:
                 pass
-        match = pattern.match(string(value))
+        str_value = string(value)
+        match = pattern.match(str_value)
 
         if match is None:
             raise Invalid(f"Expected {quantity} with unit, got {value}")
@@ -485,6 +578,9 @@ def float_with_unit(quantity, regex_suffix, optional_unit=False):
         mantissa = float(match.group(1))
         if match.group(2) not in METRIC_SUFFIXES:
             raise Invalid("Invalid {} suffix {}".format(quantity, match.group(2)))
+
+        if no_conversion:
+            return str_value
 
         multiplier = METRIC_SUFFIXES[match.group(2)]
         return mantissa * multiplier
@@ -659,6 +755,27 @@ def url(value):
     if not parsed.scheme or not parsed.netloc:
         raise Invalid("Expected a URL scheme and host")
     return parsed.geturl()
+
+
+def existing_file_path(value):
+    value = string(value)
+    if not os.path.isfile(value):
+        raise Invalid("File {} doesn't exist".format(value))
+    return value
+
+
+def existing_dir_path(value):
+    value = string(value)
+    if not os.path.isdir(value):
+        raise Invalid("Directory {} doesn't exist".format(value))
+    return value
+
+
+def existing_path(value):
+    value = string(value)
+    if not os.path.exists(value):
+        raise Invalid("Path {} doesn't exist".format(value))
+    return value
 
 
 def ensure_schema(schema) -> vol.Schema:
