@@ -121,7 +121,7 @@ setup(
     python_requires='>3.6',
 
     # Structure
-    packages=find_packages(include=['cli_rack', 'cli_rack.*', 'cli_rack_validation', 'cli_rack_validation']),
+    packages=find_packages(include=['cli_rack', 'cli_rack.*', 'cli_rack_validation', 'cli_rack_validation.*']),
     # py_modules=["app", 'cli', 'daemonize'],
 
     install_requires=requirements,
