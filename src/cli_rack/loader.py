@@ -515,7 +515,7 @@ class GithubLoader(BaseLoader):
                     'Invalid github locator "{}". '
                     "Supported format is {}".format(
                         locator_str,
-                        cls.LOCATOR_CLS.PREFIX + BaseLoader.LOCATOR_PREFIX_DELIMITER + "username/name[@branch-or-tag]",
+                        cls.LOCATOR_CLS.PREFIX + BaseLoader.LOCATOR_PREFIX_DELIMITER + "//username/name[@branch-or-tag]",
                     )
                 )
             return GithubLocatorDef(
