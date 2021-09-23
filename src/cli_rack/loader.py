@@ -110,6 +110,10 @@ class LoadedDataMeta(object):
         self.is_file: Optional[bool] = None
         self.timestamp: Optional[datetime.datetime] = datetime.datetime.now()
 
+    @property
+    def resolved_path(self) -> str:
+        return os.path.join(self.path, (self.target_path if self.target_path is not None else ""))
+
     def to_dict(self):
         return dict(
             timestamp=self.timestamp,
@@ -515,7 +519,9 @@ class GithubLoader(BaseLoader):
                     'Invalid github locator "{}". '
                     "Supported format is {}".format(
                         locator_str,
-                        cls.LOCATOR_CLS.PREFIX + BaseLoader.LOCATOR_PREFIX_DELIMITER + "//username/name[@branch-or-tag]",
+                        cls.LOCATOR_CLS.PREFIX
+                        + BaseLoader.LOCATOR_PREFIX_DELIMITER
+                        + "//username/name[@branch-or-tag]",
                     )
                 )
             return GithubLocatorDef(
