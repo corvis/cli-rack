@@ -54,7 +54,7 @@ class CliExtension(ABC):
         pass
 
     @abstractmethod
-    def handle(self, args):
+    def handle(self, args: argparse.Namespace):
         raise NotImplementedError()
 
     def __repr__(self) -> str:
@@ -70,7 +70,7 @@ class AsyncCliExtension(CliExtension):
     def loop(self):
         return self.__loop
 
-    async def handle(self, args):
+    async def handle(self, args: argparse.Namespace):
         raise NotImplementedError()
 
 
@@ -83,7 +83,7 @@ class GlobalArgsExtension(ABC):
     def setup_parser(cls, parser: argparse.ArgumentParser):
         pass
 
-    def handle(self, args):
+    def handle(self, args: argparse.Namespace):
         pass
 
 
