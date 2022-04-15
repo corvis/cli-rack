@@ -126,7 +126,7 @@ class DiscoveredCliExtension(object):
 
 class ExtensionUnavailableError(CLIRackError):
     def __init__(
-        self, extension_name: str, reason: Optional[str] = None, hint: Optional[str] = None, *args: object
+            self, extension_name: str, reason: Optional[str] = None, hint: Optional[str] = None, *args: object
     ) -> None:
         super().__init__(*args, fix_hint=hint)
         self.extension_name = extension_name
@@ -155,7 +155,7 @@ class ExecutionManager(BaseExecutionManager):
         super().__init__()
         self.__logger = logging.getLogger("cli.exec-mng")
 
-    def run(self, commands: Sequence[argparse.Namespace]):
+    def run(self, commands: Sequence[argparse.Namespace], terminate_on_error=True):
         try:
             for cmd in commands:
                 self.__logger.debug("Running {}".format(cmd.cmd))
@@ -172,7 +172,10 @@ class ExecutionManager(BaseExecutionManager):
                     msg = "Error during {} command execution: ".format(cmd.cmd) if len(commands) > 1 else ""
                     raise ExecutionManagerError(msg + str(e)) from e
         except ExecutionManagerError as e:
-            CLI.print_error(e)
+            if terminate_on_error:
+                CLI.fail(str(e))
+            else:
+                raise e
 
 
 class AsyncExecutionManager(BaseExecutionManager):
@@ -183,13 +186,13 @@ class AsyncExecutionManager(BaseExecutionManager):
 
 class CliAppManager:
     def __init__(
-        self,
-        prog_name: str,
-        add_commands_parser=True,
-        allow_multiple_commands=True,
-        description: str = None,
-        epilog: str = None,
-        **kwargs,
+            self,
+            prog_name: str,
+            add_commands_parser=True,
+            allow_multiple_commands=True,
+            description: str = None,
+            epilog: str = None,
+            **kwargs,
     ) -> None:
         super().__init__()
         self.__logger = logging.getLogger("cli.app-mng")
@@ -305,10 +308,10 @@ class CliAppManager:
         return commands
 
     def discover_and_register_extensions(
-        self,
-        package_to_scan: Union[str, Iterable[str]],
-        scan_module: Union[str, Iterable[str]] = "cli",
-        report_unavailable: Optional[bool] = None,
+            self,
+            package_to_scan: Union[str, Iterable[str]],
+            scan_module: Union[str, Iterable[str]] = "cli",
+            report_unavailable: Optional[bool] = None,
     ) -> Sequence[DiscoveredCliExtension]:
         discovered = self.discovery_manager.discover_cli_extensions(package_to_scan, scan_module, False)
         show_unavailable = report_unavailable if report_unavailable is not None else self.show_unavailable_modules
@@ -367,10 +370,10 @@ class DiscoveryManager:
         return Availability(True, None, None)
 
     def discover_cli_extensions(
-        self,
-        package_to_scan: Union[str, Iterable[str]],
-        scan_module: Union[str, Iterable[str]] = "cli",
-        ignore_unavailable=True,
+            self,
+            package_to_scan: Union[str, Iterable[str]],
+            scan_module: Union[str, Iterable[str]] = "cli",
+            ignore_unavailable=True,
     ) -> Sequence[DiscoveredCliExtension]:
         """
 
@@ -401,8 +404,8 @@ class DiscoveryManager:
                                 found_extensions = inspect.getmembers(
                                     cli_module,
                                     lambda member: inspect.isclass(member)
-                                    and member != CliExtension
-                                    and issubclass(member, CliExtension),
+                                                   and member != CliExtension
+                                                   and issubclass(member, CliExtension),
                                 )
                                 for e_name, e in found_extensions:
                                     ext = DiscoveredCliExtension(
