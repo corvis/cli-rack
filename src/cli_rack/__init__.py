@@ -133,7 +133,7 @@ class __CLI:
 
     def fail(self, exception_or_msg: str, exit_code: int = 99):
         self.print_fatal(exception_or_msg)
-        exit(exit_code)
+        sys.exit(exit_code)
 
 
 CLI = __CLI()
