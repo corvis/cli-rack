@@ -62,7 +62,7 @@ def scalar_to_list(obj: Union[Iterable[AnyScalarType], AnyScalarType]) -> Iterab
     return [obj]  # type: ignore
 
 
-def ensure_dir(dir_name: os.PathLike):
+def ensure_dir(dir_name: Union[os.PathLike, str]):
     os.makedirs(dir_name, exist_ok=True)
 
 
