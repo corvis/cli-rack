@@ -54,7 +54,7 @@ class CliExtension(ABC):
         pass
 
     @abstractmethod
-    def handle(self, args):
+    def handle(self, args: argparse.Namespace):
         raise NotImplementedError()
 
     def __repr__(self) -> str:
@@ -70,7 +70,7 @@ class AsyncCliExtension(CliExtension):
     def loop(self):
         return self.__loop
 
-    async def handle(self, args):
+    async def handle(self, args: argparse.Namespace):
         raise NotImplementedError()
 
 
@@ -83,7 +83,7 @@ class GlobalArgsExtension(ABC):
     def setup_parser(cls, parser: argparse.ArgumentParser):
         pass
 
-    def handle(self, args):
+    def handle(self, args: argparse.Namespace):
         pass
 
 
@@ -155,7 +155,7 @@ class ExecutionManager(BaseExecutionManager):
         super().__init__()
         self.__logger = logging.getLogger("cli.exec-mng")
 
-    def run(self, commands: Sequence[argparse.Namespace]):
+    def run(self, commands: Sequence[argparse.Namespace], terminate_on_error=True):
         try:
             for cmd in commands:
                 self.__logger.debug("Running {}".format(cmd.cmd))
@@ -172,7 +172,10 @@ class ExecutionManager(BaseExecutionManager):
                     msg = "Error during {} command execution: ".format(cmd.cmd) if len(commands) > 1 else ""
                     raise ExecutionManagerError(msg + str(e)) from e
         except ExecutionManagerError as e:
-            CLI.print_error(e)
+            if terminate_on_error:
+                CLI.fail(str(e))
+            else:
+                raise e
 
 
 class AsyncExecutionManager(BaseExecutionManager):

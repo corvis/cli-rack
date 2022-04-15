@@ -62,7 +62,7 @@ def scalar_to_list(obj: Union[Iterable[AnyScalarType], AnyScalarType]) -> Iterab
     return [obj]  # type: ignore
 
 
-def ensure_dir(dir_name: str):
+def ensure_dir(dir_name: Union[os.PathLike, str]):
     os.makedirs(dir_name, exist_ok=True)
 
 
@@ -74,6 +74,10 @@ def run_executable(*args, hide_output=False, mute_output=False) -> subprocess.Co
     elif hide_output:
         stdout = stderr = subprocess.PIPE  # type: ignore
     return subprocess.run(args, bufsize=1024, universal_newlines=True, stdout=stdout, stderr=stderr, shell=False)
+
+
+def run_bash(command: str, hide_output=False, mute_output=False, bash="bash") -> subprocess.CompletedProcess:
+    return run_executable(bash, "-c", command, hide_output=hide_output, mute_output=mute_output)
 
 
 def is_successful_exit_code(self, *args, expected_code=0) -> bool:
