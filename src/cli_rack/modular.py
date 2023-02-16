@@ -173,7 +173,7 @@ class ExecutionManager(BaseExecutionManager):
                     raise ExecutionManagerError(msg + str(e)) from e
         except ExecutionManagerError as e:
             if terminate_on_error:
-                CLI.fail(str(e))
+                CLI.fail(e)
             else:
                 raise e
 
