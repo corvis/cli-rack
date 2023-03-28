@@ -181,7 +181,7 @@ class ExecutionManager(BaseExecutionManager):
 class AsyncExecutionManager(BaseExecutionManager):
     def __init__(self) -> None:
         super().__init__()
-        self.__logger = logging.getLogger("cli.async-exec-mng")
+        self._logger = logging.getLogger("cli.async-exec-mng")
 
 
 class CliAppManager:
@@ -190,8 +190,8 @@ class CliAppManager:
         prog_name: str,
         add_commands_parser=True,
         allow_multiple_commands=True,
-        description: str = None,
-        epilog: str = None,
+        description: Optional[str] = None,
+        epilog: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()

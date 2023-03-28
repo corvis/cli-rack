@@ -165,6 +165,7 @@ class BaseLoader(object, metaclass=ABCMeta):
             )
 
     @classmethod
+    @abstractmethod
     def locator_to_locator_def(cls, locator_str: Union[str, BaseLocatorDef]) -> BaseLocatorDef:
         pass
 

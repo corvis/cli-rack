@@ -48,10 +48,10 @@ class CommonCliLogFormatter(logging.Formatter):
     def __init__(
         self,
         use_colors=True,
-        level2color: Dict[int, str] = None,
-        stack_color: str = None,
-        level2name: Dict[int, str] = None,
-        max_logger_name_len=None,
+        level2color: Optional[Dict[int, str]] = None,
+        stack_color: Optional[str] = None,
+        level2name: Optional[Dict[int, str]] = None,
+        max_logger_name_len: Optional[int] = None,
         show_stack_traces=False,
     ):
         super().__init__()
