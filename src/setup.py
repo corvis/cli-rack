@@ -66,14 +66,8 @@ def read_requirements(file_name: str):
 
 # Get the long description from the README file
 readme_file = path.join(root_dir, 'docs/pypi-description.md')
-try:
-    from m2r import parse_from_file
-
-    long_description = parse_from_file(readme_file)
-except ImportError:
-    # m2r may not be installed in user environment
-    with open(readme_file) as f:
-        long_description = f.read()
+with open(readme_file) as f:
+    long_description = f.read()
 
 # Requirements
 requirements_file = path.join(root_dir, 'requirements.txt')
@@ -86,6 +80,7 @@ setup(
     version=version,
     description='CLI Rack - Lightweight set of tools for building pretty-looking CLI applications in Python',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/corvis/cli-rack',
     keywords='python cli terminal modular oop',
 
