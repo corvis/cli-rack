@@ -23,7 +23,7 @@
 
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 from . import ansi
 from .logger import CommonCliLogFormatter, UILogFormatter
@@ -131,7 +131,7 @@ class __CLI:
     def clear_screen(self):
         self.ui_logger.info(ansi.Seq.clear_screen())
 
-    def fail(self, exception_or_msg: str, exit_code: int = 99):
+    def fail(self, exception_or_msg: Union[str, Exception], exit_code: int = 99):
         self.print_fatal(exception_or_msg)
         sys.exit(exit_code)
 
