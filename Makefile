@@ -11,7 +11,7 @@ SRC_ROOT := ./src/cli_rack
 .DEFAULT_GOAL := pre_commit
 
 pre_commit: copyright format lint
-setup: venv, deps
+setup: venv deps
 
 copyright:
 	@( \
