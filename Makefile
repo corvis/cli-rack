@@ -85,7 +85,7 @@ build: copyright format lint clean
 clean:
 	@(rm -rf src/build dist/* *.egg-info src/*.egg-info .pytest_cache)
 
-publish:
+publish: build
 	@( \
        set -e; \
        if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
@@ -94,6 +94,17 @@ publish:
        echo "Uploading to PyPi"; \
        twine upload -r pypi dist/*; \
        echo "DONE: Publish"; \
+    )
+    
+test-publish: build
+	@( \
+       set -e; \
+       if [ -z $(SKIP_VENV) ]; then source $(VIRTUAL_ENV_PATH)/bin/activate; fi; \
+       if [ ! -z $(PYPI_API_KEY) ]; then export TWINE_USERNAME="__token__"; export TWINE_PASSWORD="$(PYPI_API_KEY)"; fi; \
+       if [ ! -z $(PYPI_REPOSITORY_URL) ]; then  export TWINE_REPOSITORY_URL="$(PYPI_REPOSITORY_URL)"; fi; \
+       echo "Uploading to TEST PyPi"; \
+       twine upload -r testpypi dist/*; \
+       echo "DONE: Publish (TEST PyPi)"; \
     )
 
 set-version:
@@ -111,6 +122,6 @@ deps:
 
 venv:
 	@( \
-		virtualenv $(VIRTUAL_ENV_PATH); \
+		python -m venv $(VIRTUAL_ENV_PATH); \
 		source ./venv/bin/activate; \
 	)
