@@ -31,6 +31,11 @@ from typing import List, Optional, Any, Dict
 from .ansi import Seq, AnsiCodeType, stream_supports_unicode
 import re
 
+try:
+    from wcwidth import wcswidth as len_fn
+except ImportError:
+    len_fn = len
+
 
 class Alignment(str, Enum):
     """Cell content alignment options"""
@@ -38,6 +43,13 @@ class Alignment(str, Enum):
     LEFT = "left"
     CENTER = "center"
     RIGHT = "right"
+
+
+class WrapMode(str, Enum):
+    OVERFLOW = "overflow"
+    WRAP = "wrap"  # wrap by character
+    SOFT_WRAP = "soft_wrap"  # wrap by word
+    ELLIPSIS = "ellipsis"
 
 
 @dataclass
@@ -156,11 +168,15 @@ class Column:
     align: Alignment = Alignment.LEFT
     header_style: Optional[AnsiCodeType] = None
     style: Optional[AnsiCodeType] = None
-    width: Optional[int] = None  # New: optional fixed width for this column
+    width: Optional[int] = None
+    max_width: Optional[int] = None
+    wrap_mode: WrapMode = WrapMode.OVERFLOW
 
     def __post_init__(self):
         if self.id is None:
             self.id = self.name
+        if not isinstance(self.wrap_mode, WrapMode):
+            self.wrap_mode = WrapMode(self.wrap_mode)
 
 
 class Table:
@@ -197,7 +213,9 @@ class Table:
         align: Alignment = Alignment.LEFT,
         header_style: Optional[AnsiCodeType] = None,
         style: Optional[AnsiCodeType] = None,
-        width: Optional[int] = None,  # New: optional fixed width for this column
+        width: Optional[int] = None,
+        max_width: Optional[int] = None,
+        wrap_mode: WrapMode = WrapMode.OVERFLOW,
     ):
         col = Column(
             name=name,
@@ -207,6 +225,8 @@ class Table:
             header_style=header_style or self.default_header_style,
             style=style or self.default_cell_style,
             width=width,
+            max_width=max_width,
+            wrap_mode=wrap_mode,
         )
         self._col_id_map[col.id] = len(self.columns)
         self.columns.append(col)
@@ -234,14 +254,18 @@ class Table:
         return self.ANSI_ESCAPE_RE.sub("", text)
 
     def _get_column_widths(self) -> List[int]:
-        # 1. Start with explicit column widths if set
-        widths = [col.width if col.width is not None else len(self.strip_ansi(col.name)) for col in self.columns]
-        # 2. Expand to fit content if needed
+        widths = [col.width if col.width is not None else len_fn(self.strip_ansi(col.name)) for col in self.columns]
         for row in self.rows:
             for i, cell in enumerate(row):
-                cell_len = max(len(self.strip_ansi(line)) for line in self._split_cell_lines(cell))
-                if self.columns[i].width is None:
+                col = self.columns[i]
+                cell_lines = self._split_cell_lines(cell)
+                cell_len = max(len_fn(self.strip_ansi(line)) for line in cell_lines)
+                if col.width is None:
                     widths[i] = max(widths[i], cell_len)
+        # Apply max_width if set
+        for i, col in enumerate(self.columns):
+            if col.max_width is not None:
+                widths[i] = min(widths[i], col.max_width)
         # 3. If table_width is set, adjust widths to fit
         if self.table_width is not None:
             total_border = (len(self.columns) + 1) * len(self.style_config.vertical_outer)
@@ -251,10 +275,8 @@ class Table:
             flex_count = len(flex_cols)
             content_width = self.table_width - total_border - total_padding
             if flex_count > 0:
-                # Calculate available width for flexible columns
                 flex_total = content_width - fixed
                 if flex_total < flex_count:
-                    # Not enough space, set all flex columns to 1
                     for i in flex_cols:
                         widths[i] = 1
                 else:
@@ -262,11 +284,10 @@ class Table:
                     extra = flex_total % flex_count
                     for idx, i in enumerate(flex_cols):
                         widths[i] = base + (1 if idx < extra else 0)
-            # If all columns are fixed, just use their widths
         return widths
 
     def _align_text(self, text: str, width: int, alignment: Alignment) -> str:
-        visible_len = len(self.strip_ansi(text))
+        visible_len = len_fn(self.strip_ansi(text))
         if alignment == Alignment.LEFT:
             return text + " " * (width - visible_len)
         elif alignment == Alignment.RIGHT:
@@ -296,8 +317,60 @@ class Table:
     def _split_cell_lines(self, cell: str) -> List[str]:
         return cell.splitlines() or [""]
 
+    def _wrap_cell_content(self, content: str, width: int, wrap_mode: WrapMode) -> List[str]:  # noqa:C901
+        stripped = self.strip_ansi(content)
+        if wrap_mode == WrapMode.OVERFLOW:
+            return [content]
+        elif wrap_mode == WrapMode.ELLIPSIS:
+            if len_fn(stripped) <= width:
+                return [content]
+            ellipsis = "…"
+            visible = ""
+            for ch in content:
+                if len_fn(self.strip_ansi(visible + ch)) > width - 1:
+                    break
+                visible += ch
+            return [visible + ellipsis]
+        elif wrap_mode == WrapMode.WRAP:
+            # Character-based wrapping
+            lines = []
+            current = ""
+            for ch in content:
+                if len_fn(self.strip_ansi(current + ch)) > width:
+                    lines.append(current)
+                    current = ch
+                else:
+                    current += ch
+            if current:
+                lines.append(current)
+            return lines
+        elif wrap_mode == WrapMode.SOFT_WRAP:
+            # Word-based wrapping (previous WRAP logic)
+            lines = []
+            current = ""
+            for word in stripped.split():
+                if len_fn(self.strip_ansi(current + (" " if current else "") + word)) > width:
+                    if current:
+                        lines.append(current)
+                    current = word
+                else:
+                    current = (current + " " if current else "") + word
+            if current:
+                lines.append(current)
+            return lines
+        else:
+            return [content]
+
     def _render_row(self, cells: List[str], widths: List[int], col_props: List[Column], is_header=False) -> str:
-        split_cells = [self._split_cell_lines(cell) for cell in cells]
+        split_cells = []
+        for i, cell in enumerate(cells):
+            col = col_props[i]
+            width = widths[i]
+            wrap_mode = col.wrap_mode
+            split = []
+            for line in self._split_cell_lines(cell):
+                split.extend(self._wrap_cell_content(line, width, wrap_mode))
+            split_cells.append(split)
         row_height = max(len(lines) for lines in split_cells)
         padded_cells = [lines + [""] * (row_height - len(lines)) for lines in split_cells]
         rendered_lines = []
