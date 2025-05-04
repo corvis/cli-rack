@@ -31,6 +31,7 @@ See more details here: https://en.wikipedia.org/wiki/ANSI_escape_code
 import os
 import platform
 import re
+import sys
 from typing import Union, Tuple, Optional
 
 from .utils import any_of_keys_exists
@@ -314,3 +315,26 @@ def stream_supports_colors(stream) -> bool:
     except:  # noqa: E722
         return False
     return False
+
+
+def stream_supports_unicode() -> bool:
+    """
+    Check if the terminal supports Unicode characters.
+    Returns True if Unicode is supported, False otherwise.
+    """
+    # Check if we're running in a terminal
+
+    # Check environment variables
+    term = sys.stdout.encoding.lower()
+    if term in ("utf-8", "utf8", "utf-16", "utf16", "utf-32", "utf32"):
+        return True
+
+    # Check platform
+    if sys.platform.startswith("win"):
+        # Windows has limited Unicode support
+        return False
+
+    # Check for common terminal types that support Unicode
+    term_type = os.environ.get("TERM", "").lower()
+    unicode_terms = ("xterm", "xterm-256color", "screen", "screen-256color", "linux", "rxvt-unicode")
+    return any(term_type.startswith(t) for t in unicode_terms)
